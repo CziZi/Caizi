@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title>贪吃蛇项目</title>
+		<style type="text/css">
+			h1{
+				text-align: center;
+			}
+			#score{
+				text-align: center;
+				font-size: 50px;
+			}
+			#snakeMap{
+				margin: 0 auto;
+				border: 3px solid red;
+			}
+			.row{
+				height: 20px;
+				/*border: 1px solid blue;*/
+			}
+			.col{
+				height: 20px;
+				width: 20px;
+				border: 1px solid black;
+				float: left;
+				/*怪异盒模型*/
+				box-sizing: border-box;
+			}
+			.moveSnake{
+				background-color: greenyellow;
+			}
+			.food{
+				background-color: gold;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>贪吃蛇</h1>
+		<div id="score">0</div>
+		<!--蛇爬行地图部分-->
+		<div id="snakeMap">
+			
+		</div>
+	</body>
+	<script type="text/javascript">
+		//获取🐍所在地图对象
+		var snakeMap = document.getElementById("snakeMap");
+		var score = document.getElementById("score");
+		//为了灵活创建地图,将地图的行数和列数存储到变量中
+		var rowNumber = 20;//存储行数
+		var colNumber = 14;//存储列数
+		//灵活的设置地图的高度和宽度.例如:设置每个表格的宽度和高度为 20
+		var smallDivW = 20;
+		snakeMap.style.width = smallDivW * colNumber + "px";
+		snakeMap.style.height = smallDivW * rowNumber + "px";
+		var divsSnake = [];//二维数组,用来存储地图上所有位置的表格div(为了获取div所在的位置)
+		var rowArray;
+		//使用双侧for循环创建地图
+		for (var i = 0;i < rowNumber;i++) {
+			//创建行所在的div(大的)
+			var rowDiv = document.createElement("div");
+			//设置样式
+			rowDiv.className = "row";
+			//添加到snakeMap地图上
+			snakeMap.appendChild(rowDiv);
+			//创建一个数组,用来存储每一行中所有的小方格
+			 rowArray = [];
+			for (var j = 0;j < colNumber;j++) {
+			//创建每一行中所需要的小方块div
+			var colDiv = document.createElement("div");
+			//设置小方格的样式
+			colDiv.className = "col";
+			//添加到所在的行中
+			rowDiv.appendChild(colDiv);
+			//将该行的小方块添加到行数组中
+			rowArray.push(colDiv);
+			}
+			//最后将行数组里的div全部添加到二维数组中
+			divsSnake.push(rowArray);
+		}
+		
+//		alert(divsSnake.length);
+   console.log(divsSnake);
+   //创建数组,存储🐍身所占用的div
+   var snakeBodys = [];
+   for (var i = 0;i < 3;i++) {
+   	//存储🐍身div到数组中
+   	snakeBodys[i] = divsSnake[0][i];
+   	//或者
+// 	snakeBodys.push(divsSnake[0][i]);
+    //设置移动的蛇身颜色,设置样式
+    divsSnake[0][i].className = 
+    "moveSnake col";
+   }
+   //设置一个变量,用来存储蛇移动的方向
+// right left top bottom 分别代表四个方向
+   var directionSnake = "right";
+   var changeDirect = true;//记录是否改变方向
+   //创建一个延时器
+   //添加键盘事件,通过键盘的上,下,左,右四个方向,控制蛇移动的方向
+   var timeOut;
+   document.onkeydown = function (e){
+   	clearTimeout(timeOut);
+   	if (changeDirect == false) {
+   		return;//在相隔时间以内,蛇不移动
+   	}
+    var event1 = event || e;
+    //判断几个特殊情况,为了合理性(蛇头和蛇尾不能交换方向)
+    //蛇头往右移动,点击左按键,则操作不成功!
+//  直接return即可
+    if (directionSnake == "right" && event1.keyCode == 37) {
+    	return;
+    }else if(directionSnake == "left" && event1.keyCode == 39) {
+    	//如果蛇移动的方向是向左,此时点击右按键,不执行
+    	return;
+    }else if(directionSnake == "top" && event1.keyCode == 40) {
+    	return;
+    }else if(directionSnake == "bottom" && event1.keyCode == 38) {
+    	return;
+    }
+    //点击不同的按键(上下左右按键),设置蛇移动的方向
+    switch (event1.keyCode){
+    	case 37:{//蛇该向左移动
+    		directionSnake = "left";
+    		break;
+    	}
+    	case 38:{//蛇该向上移动
+    		directionSnake = "top";
+    		break;
+    	}
+    	case 39:{//蛇该向右移动
+    		directionSnake = "right";
+    		break;
+    	}
+    	case 40:{//蛇该向下移动
+    		directionSnake = "bottom";
+    		break;
+    	}
+    	default:
+    		break;
+    }
+    //为了防止连续快速多次点击按键,造成bug,我们处理键盘事件时,使用相隔时间处理
+   	changeDirect = false;
+   	timeOut = setTimeout(function (){
+   		changeDirect = true;
+   	},300);
+   }
+   //设置蛇头所在的位置(也就是蛇头div在二维数组中的坐标)
+    var x = 2;
+    var y = 0;//存储蛇头坐标
+    var foodX = 0;
+    var foodY = 0;//记录食物所在的位置坐标
+    var scores = 0;//记录得分
+    //处理蛇的移动
+    var timerMove = setInterval(function (){
+    	clearTimeout(timeOut);
+    	//改变状态,以便于下次可以点击键盘按键
+    	changeDirect = true;
+    	//判断蛇移动的方向,从而设置蛇移动的位置
+    	switch (directionSnake){
+    		case "right":{//向右
+    			x++;
+    			break;
+    		}
+    		case "left":{//向左
+    			x--;
+    			break;
+    		}
+    		case "top":{//向上
+    			y--;
+    			break;
+    		}
+    		case "bottom":{//向下
+    			y++;
+    			break;
+    		}
+    		default:
+    			break;
+    	}
+    	//为了合理性,判断蛇碰撞到墙壁就 game over
+    	if (x < 0 || y < 0 || x >= colNumber || y >= rowNumber) {
+    		//清除蛇移动的定时器
+    		clearInterval(timerMove);
+    		alert("game over");
+    		return;//终止函数的执行
+    	}
+    	//如果蛇吃到自己的身体,则game over
+    	for (var i = 0;i < snakeBodys.length;i++) {
+    		//将此时蛇头移动的位置所在的div和之前舍身所在的所有div进行对比,如果相同,则说明吃到身体部分,game over;
+    		if (snakeBodys[i] == divsSnake[y][x]) {
+    		//清除蛇移动的定时器
+    		clearInterval(timerMove);
+    		alert("game over 蛇吃到身体!");
+    		return;
+    		}
+    	}
+     //设置蛇身长度移动的过程
+     //如果蛇吃到食物,则蛇头和食物的位置一致
+     if (foodX == x && foodY == y) {
+     	//说明蛇吃到了食物
+     	//改变蛇头颜色
+     	divsSnake[y][x].className = "moveSnake col";
+     	//将蛇头所在的div,添加到蛇身所在数组中
+     	snakeBodys.push(divsSnake[y][x]);
+     	//得分加1
+     	scores++;
+     	//显示得分
+     	score.innerHTML = scores;
+     	//继续随机食物
+     	ranFoods();
+     }else{
+     	//说明蛇未吃到食物,继续移动
+     	//改变蛇尾这个div的颜色
+     	snakeBodys[0].className = "col";
+     	//删除蛇尾的div
+     	snakeBodys.shift();
+     	//添加蛇头
+     	divsSnake[y][x].className = "moveSnake col";
+     	//蛇头所在的div添加到蛇身数组里
+     	snakeBodys.push(divsSnake[y][x]);
+     }
+ 
+
+    },300);
+   
+   //随机函数
+   function ranNum (m,n){
+   return	Math.floor(Math.random() * (n - m + 1) + m);
+   }
+   //随机食物
+   function ranFoods (){
+   	//随机行位置下标
+   	foodY = ranNum(0,rowNumber - 1);
+   	//随机列位置下标
+   	foodX = ranNum(0,colNumber - 1);
+   	//如果随机的食物在蛇身上,则重新随机食物的位置,直到随机出不同位置为止;
+   	if (divsSnake[foodY][foodX].className == "moveSnake col") {
+   		//如果随机食物在蛇身体上,则重新随机位置
+   		ranFoods();//重新随机
+   	}else{
+   		//设置食物所在的位置的颜色
+   		divsSnake[foodY][foodX].className = "food col";
+   	}
+   }
+   //首先,随机一次食物的位置
+   ranFoods();
+		
+	</script>
+</html>
